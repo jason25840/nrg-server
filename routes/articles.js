@@ -123,4 +123,25 @@ router.delete('/:id', authMiddleware, isAdmin, async (req, res) => {
   }
 });
 
+// 📌 PUT /api/articles/:id/like - Toggle like (add or remove)
+router.put('/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) {
+      return res.status(404).json({ message: 'Article not found' });
+    }
+
+    // Toggle like feature (Assumes we track user likes in the future)
+    article.likes += 1; // For now, it just increments the count
+
+    await article.save();
+    res.json({ likes: article.likes });
+  } catch (error) {
+    console.error('Error updating likes:', error);
+    res
+      .status(500)
+      .json({ message: 'Error updating likes', error: error.message });
+  }
+});
+
 module.exports = router;
