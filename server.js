@@ -10,6 +10,7 @@ const signupRoutes = require('./routes/auth/signup');
 const signinRoutes = require('./routes/auth/signin');
 const authRoutes = require('./routes/auth/auth');
 const profileRoutes = require('./routes/profile');
+const eventRoutes = require('./routes/events');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/auth/signin', signinRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/articles', articlesRoutes);
+app.use('/api/events', eventRoutes);
 
 // Server Listener
 const PORT = process.env.PORT || 5001;
