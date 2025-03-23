@@ -1,17 +1,18 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-  const token = req.header('x-auth-token');
+  const token = req.cookies.jwt; // ✅ Get token from HttpOnly cookie
+
   if (!token) {
-    return res.status(401).json({ msg: 'No token, authorization denied' });
+    return res.status(401).json({ msg: 'Not authenticated' });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded.user;
+    req.user = decoded.user; // ✅ Attach user data to `req.user`
     next();
   } catch (err) {
-    res.status(401).json({ msg: 'Token is not valid' });
+    res.status(401).json({ msg: 'Invalid token' });
   }
 };
 

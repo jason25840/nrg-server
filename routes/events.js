@@ -13,13 +13,18 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 📌 POST /api/events - Create a new event (Admin Only)
+// 📌 POST /api/events - Create a new event
 router.post('/', async (req, res) => {
   try {
+    console.log('🔍 Incoming Request Body:', req.body);
+
+    // ✅ Ensure we don't include `_id` manually
     const { title, description, date, location, genre, image, createdBy } =
       req.body;
-    if (!title || !description || !date || !location || !genre) {
-      return res.status(400).json({ message: 'Missing required fields' });
+
+    if (!createdBy) {
+      console.log('❌ Missing `createdBy` field:', req.body);
+      return res.status(400).json({ message: 'Missing `createdBy` field' });
     }
 
     const newEvent = new Event({
@@ -28,15 +33,17 @@ router.post('/', async (req, res) => {
       date,
       location,
       genre,
-      image: image || 'https://via.placeholder.com/300',
-      createdBy,
+      image:
+        image ||
+        'https://plus.unsplash.com/premium_photo-1681437096333-64bc0ab6133b?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTd8fGFkdmVudHVyZSUyMGV2ZW50c3xlbnwwfHwwfHx8MA%3D%3D',
+      createdBy, // ✅ This will auto-generate `_id`
     });
 
-    await newEvent.save();
-    res.status(201).json(newEvent);
+    const savedEvent = await newEvent.save();
+    res.status(201).json(savedEvent);
   } catch (error) {
-    console.error('Error creating event:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Error creating event:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

@@ -3,12 +3,9 @@ const { check, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
-
 const router = express.Router();
 
-// @route   POST api/auth/signin
-// @desc    Authenticate user & get token with role
-// @access  Public
+// ✅ User Signin Route
 router.post(
   '/',
   [
@@ -31,12 +28,8 @@ router.post(
       }
 
       console.log('✅ User found:', user.email);
-      console.log('Stored Hashed Password:', user.password);
-      console.log('Entered Password:', password);
 
       const isMatch = await bcrypt.compare(password, user.password);
-      console.log('Password Match:', isMatch);
-
       if (!isMatch) {
         console.log('🚨 Passwords do not match!');
         return res.status(400).json({ msg: 'Invalid credentials' });
@@ -44,12 +37,20 @@ router.post(
 
       const payload = { user: { id: user.id, role: user.role } };
       const token = jwt.sign(payload, process.env.JWT_SECRET, {
-        expiresIn: '1h',
+        expiresIn: '1d',
       });
 
-      console.log('✅ Signin successful. Sending token...');
+      // ✅ Store JWT in HttpOnly cookie
+      res.cookie('jwt', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        sameSite: 'Strict',
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
+
+      console.log('✅ Login successful. JWT stored in cookie.');
+
       res.json({
-        token,
         user: {
           id: user.id,
           name: user.name,

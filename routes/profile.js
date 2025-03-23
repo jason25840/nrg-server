@@ -2,6 +2,8 @@ const express = require('express');
 const { validateProfileUpdate } = require('../middleware/validationMiddleware');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const Profile = require('../models/Profile');
+const User = require('../models/User');
+const Article = require('../models/Article');
 
 const router = express.Router();
 
@@ -14,13 +16,27 @@ router.get('/:userId', authMiddleware, async (req, res) => {
     }
 
     // Fetch profile
-    const profile = await Profile.findOne({ user: req.params.userId });
+    const profile = await Profile.findOne({ user: req.params.userId }).populate(
+      'user',
+      'name email'
+    );
 
     if (!profile) {
       return res.status(200).json({ msg: 'No profile found', profile: null });
     }
 
-    res.json(profile);
+    // ✅ Fetch bookmarked articles authored by this user
+    const bookmarkedArticles = await Article.find({
+      bookmarkedBy: req.params.userId,
+    }).select('title _id content'); // or select more fields if you want
+
+    // ✅ Attach them to the profile
+    const response = {
+      ...profile.toObject(),
+      bookmarkedArticles, // ✅ add this new field
+    };
+
+    res.json(response);
   } catch (err) {
     console.error('Error fetching profile:', err);
     res.status(500).json({ msg: 'Server error' });

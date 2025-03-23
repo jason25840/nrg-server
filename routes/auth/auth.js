@@ -74,4 +74,15 @@ router.put(
   }
 );
 
+// ✅ Signout Route (Clears Cookie & Requires Auth)
+router.post('/signout', authMiddleware, (req, res) => {
+  try {
+    res.cookie('jwt', '', { httpOnly: true, expires: new Date(0) }); // Clears cookie
+    return res.json({ msg: 'Logged out successfully' });
+  } catch (error) {
+    console.error('❌ Signout Error:', error);
+    return res.status(500).json({ msg: 'Internal Server Error' });
+  }
+});
+
 module.exports = router;
