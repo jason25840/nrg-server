@@ -11,7 +11,10 @@ router.get('/', async (req, res) => {
   try {
     const articles = await Article.find()
       .populate('likedBy', 'name')
-      .select('title category content image likes likedBy bookmarkedBy');
+      .populate('createdBy', 'name')
+      .select(
+        'title category content image likes likedBy bookmarkedBy author createdBy'
+      );
 
     if (!articles || articles.length === 0) {
       return res.status(404).json({ message: 'No articles found' });
@@ -26,6 +29,8 @@ router.get('/', async (req, res) => {
       likes: article.likes || 0,
       likedBy: article.likedBy || [],
       bookmarkedBy: article.bookmarkedBy || [],
+      author: article.author,
+      createdBy: article.createdBy,
       snippet: article.content
         ? article.content.substring(0, 100) + '...'
         : 'No description available.',
@@ -41,7 +46,7 @@ router.get('/', async (req, res) => {
 // 📌 GET /api/articles/:id - Fetch an article by ID (Public)
 router.get('/:id', async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id); // ✅ FIXED
+    const article = await Article.findById(req.params.id);
 
     if (!article) {
       return res.status(404).json({ message: 'Article not found' });
@@ -57,24 +62,34 @@ router.get('/:id', async (req, res) => {
 // 📌 POST /api/articles - Create a new article (Admin only)
 router.post('/', authMiddleware, isAdmin, async (req, res) => {
   try {
-    const { title, category, content, image } = req.body;
+    const { title, category, content, image, author } = req.body;
 
-    // ✅ Validate required fields
-    if (!title || !category || !content) {
-      return res
-        .status(400)
-        .json({ message: 'Title, category, and content are required.' });
+    if (!title || !category || !content || !author) {
+      return res.status(400).json({
+        message: 'Title, category, content, and author are required.',
+      });
     }
 
-    // ✅ Set a default image if none is provided
-    const placeholderImage =
-      'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8ZXJyb3J8ZW58MHx8MHx8fDA%3D';
+    const placeholderImage = '/images/placeholder.png';
+
+    console.log('🛠 Incoming Article Data:', {
+      title,
+      category,
+      content,
+      author,
+      image,
+      createdBy: req.user?.id,
+    });
+
+    console.log('🧾 Authenticated User:', req.user);
 
     const newArticle = new Article({
       title,
       category,
       content,
-      image: image || placeholderImage, // ✅ Use placeholder if no image
+      author,
+      image: image || placeholderImage,
+      createdBy: req.user._id,
     });
 
     await newArticle.save();
@@ -90,16 +105,16 @@ router.post('/', authMiddleware, isAdmin, async (req, res) => {
 // 📌 PUT /api/articles/:id - Update an article (Admin only)
 router.put('/:id', authMiddleware, isAdmin, async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id); // ✅ FIXED
+    const article = await Article.findById(req.params.id);
     if (!article) {
       return res.status(404).json({ message: 'Article not found' });
     }
 
-    // ✅ Only update fields that were sent in the request
     if (req.body.title) article.title = req.body.title;
     if (req.body.category) article.category = req.body.category;
     if (req.body.content) article.content = req.body.content;
     if (req.body.image) article.image = req.body.image;
+    if (req.body.author) article.author = req.body.author;
 
     await article.save();
     res.json(article);
@@ -113,7 +128,7 @@ router.put('/:id', authMiddleware, isAdmin, async (req, res) => {
 // 📌 DELETE /api/articles/:id - Delete an article (Admin only)
 router.delete('/:id', authMiddleware, isAdmin, async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id); // ✅ FIXED
+    const article = await Article.findById(req.params.id);
     if (!article) {
       return res.status(404).json({ message: 'Article not found' });
     }
@@ -127,33 +142,37 @@ router.delete('/:id', authMiddleware, isAdmin, async (req, res) => {
   }
 });
 
+// 📌 PUT /api/articles/:id/like - Like an article
 router.put('/:id/like', authMiddleware, async (req, res) => {
   try {
     const { userId } = req.body;
     const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ message: 'Article not found' });
 
+    if (!article) return res.status(404).json({ message: 'Article not found' });
     if (!userId)
       return res.status(401).json({ message: 'User not authenticated' });
 
-    // Check if user already liked the article
-    const likeIndex = article.likedBy.indexOf(userId);
+    const alreadyLiked = article.likedBy.includes(userId);
 
-    if (likeIndex === -1) {
-      // ✅ If not liked, add the user to likedBy array
-      article.likedBy.push(userId);
-      article.likes += 1;
-    } else {
-      // ✅ If already liked, remove the user from likedBy array
-      article.likedBy.splice(likeIndex, 1);
-      article.likes -= 1;
-    }
+    const update = alreadyLiked
+      ? {
+          $pull: { likedBy: userId },
+          $inc: { likes: -1 },
+        }
+      : {
+          $addToSet: { likedBy: userId },
+          $inc: { likes: 1 },
+        };
 
-    await article.save();
+    await Article.updateOne({ _id: req.params.id }, update);
+
+    const updatedArticle = await Article.findById(req.params.id).select(
+      'likes likedBy'
+    );
 
     res.json({
-      likes: article.likes,
-      likedBy: article.likedBy,
+      likes: updatedArticle.likes,
+      likedBy: updatedArticle.likedBy,
     });
   } catch (error) {
     console.error('Error updating likes:', error);
@@ -163,44 +182,31 @@ router.put('/:id/like', authMiddleware, async (req, res) => {
   }
 });
 
-router.put('/:id/bookmark', async (req, res) => {
+// 📌 PUT /api/articles/:id/bookmark - Bookmark/Unbookmark an article
+router.put('/:id/bookmark', authMiddleware, async (req, res) => {
   try {
-    const articleId = req.params.id;
-    const { userId } = req.body;
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).json({ message: 'Article not found' });
 
-    if (!mongoose.Types.ObjectId.isValid(articleId)) {
-      return res.status(400).json({ message: 'Invalid article ID' });
-    }
+    const userId = req.user._id.toString();
 
-    if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
-    }
-
-    const article = await Article.findById(articleId);
-    if (!article) {
-      return res.status(404).json({ message: 'Article not found' });
-    }
-
-    // ✅ Ensure bookmarkedBy exists
-    if (!Array.isArray(article.bookmarkedBy)) {
-      article.bookmarkedBy = [];
-    }
-
-    const alreadyBookmarked = article.bookmarkedBy.includes(userId);
+    const alreadyBookmarked = article.bookmarkedBy.some(
+      (id) => id.toString() === userId
+    );
 
     if (alreadyBookmarked) {
       article.bookmarkedBy = article.bookmarkedBy.filter(
         (id) => id.toString() !== userId
       );
     } else {
-      article.bookmarkedBy.push(userId);
+      article.bookmarkedBy.push(req.user._id);
     }
 
     await article.save();
 
     res.json({
-      bookmarks: article.bookmarkedBy.length,
-      bookmarkedBy: article.bookmarkedBy,
+      article,
+      action: alreadyBookmarked ? 'unbookmarked' : 'bookmarked',
     });
   } catch (error) {
     console.error('❌ Error bookmarking article:', error);

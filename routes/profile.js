@@ -3,12 +3,13 @@ const { validateProfileUpdate } = require('../middleware/validationMiddleware');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const Profile = require('../models/Profile');
 const User = require('../models/User');
+const Event = require('../models/Event');
 const Article = require('../models/Article');
 
 const router = express.Router();
 
 // Fetch profile
-router.get('/:userId', authMiddleware, async (req, res) => {
+router.get('/:userId', async (req, res) => {
   try {
     // Ensure userId exists
     if (!req.params.userId) {
@@ -30,10 +31,15 @@ router.get('/:userId', authMiddleware, async (req, res) => {
       bookmarkedBy: req.params.userId,
     }).select('title _id content'); // or select more fields if you want
 
+    const savedEvents = await Event.find({
+      bookmarks: req.params.userId,
+    }).select('title _id image description likes bookmarks date location');
+
     // ✅ Attach them to the profile
     const response = {
       ...profile.toObject(),
-      bookmarkedArticles, // ✅ add this new field
+      bookmarkedArticles,
+      savedEvents,
     };
 
     res.json(response);
@@ -45,11 +51,12 @@ router.get('/:userId', authMiddleware, async (req, res) => {
 
 // Create profile
 router.post('/', authMiddleware, async (req, res) => {
+  console.log('📥 Incoming Profile Data:', req.body);
   try {
     const { pursuits, accomplishments, socialMediaLinks } = req.body;
 
     // Ensure a profile doesn't already exist
-    let profile = await Profile.findOne({ user: req.user.id });
+    let profile = await Profile.findOne({ user: req.user._id });
 
     if (profile) {
       return res.status(400).json({ msg: 'Profile already exists' });
@@ -57,7 +64,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     // Create a new profile
     profile = new Profile({
-      user: req.user.id,
+      user: req.user._id,
       pursuits: pursuits || [],
       accomplishments: accomplishments || [],
       socialMediaLinks: socialMediaLinks || {

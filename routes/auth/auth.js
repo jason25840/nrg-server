@@ -12,7 +12,7 @@ const router = express.Router();
 router.get('/user', authMiddleware, async (req, res) => {
   try {
     // Fetch the user from the database, excluding the password
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user._id).select('-password');
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
@@ -45,13 +45,14 @@ router.put(
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { oldPassword, newPassword } = req.body;
 
     try {
-      const user = await User.findById(req.user.id);
+      const user = await User.findById(req.user._id);
       if (!user) {
         return res.status(404).json({ msg: 'User not found' });
       }

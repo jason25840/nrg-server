@@ -4,7 +4,16 @@ const crypto = require('crypto');
 
 const UserSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 20,
+      match: /^[a-zA-Z0-9_]+$/,
+    },
+    name: { type: String, required: false, trim: true }, // optional real name
     email: {
       type: String,
       required: true,
@@ -18,6 +27,10 @@ const UserSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
+    bookmarkedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }],
+    bookmarkedArticles: [
+      { type: mongoose.Schema.Types.ObjectId, ref: 'Article' },
+    ],
   },
   { timestamps: true }
 );

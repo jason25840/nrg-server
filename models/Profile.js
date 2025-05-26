@@ -14,8 +14,8 @@ const ProfileSchema = new mongoose.Schema({
   ],
   accomplishments: [
     {
-      type: { type: String, required: true }, // e.g., "Climbing"
-      details: { type: String, required: true }, // e.g., "Route XYZ, 5.14a, Sport"
+      type: { type: String, required: false }, // e.g., "Climbing"
+      details: { type: String, required: false }, // e.g., "Route XYZ, 5.14a, Sport"
     },
   ],
   socialMediaLinks: {

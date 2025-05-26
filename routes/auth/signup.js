@@ -13,6 +13,7 @@ router.post(
   '/',
   [
     check('name', 'Name is required').notEmpty(),
+    check('username', 'Username is required').notEmpty(),
     check('email', 'Please include a valid email').isEmail(),
     check('password', 'Password must be 6 or more characters').isLength({
       min: 6,
@@ -30,7 +31,7 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, email, password, role } = req.body;
+    const { name, username, email, password, role } = req.body;
 
     try {
       let user = await User.findOne({ email });
@@ -50,6 +51,7 @@ router.post(
 
       user = new User({
         name,
+        username,
         email,
         password, // Do NOT hash here! User.js already hashes.
         avatar,
@@ -57,7 +59,7 @@ router.post(
       });
       await user.save();
 
-      const payload = { user: { id: user.id, role: user.role } };
+      const payload = { user: { id: user._id, role: user.role } };
       const token = jwt.sign(payload, process.env.JWT_SECRET, {
         expiresIn: '1h',
       });
@@ -65,8 +67,9 @@ router.post(
       res.status(201).json({
         token,
         user: {
-          id: user.id,
+          id: user._id,
           name: user.name,
+          username: user.username,
           email: user.email,
           role: user.role,
         },

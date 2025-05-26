@@ -18,7 +18,9 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = email.toLowerCase().trim();
+    console.log('🔎 Normalized email for lookup:', email);
 
     try {
       const user = await User.findOne({ email });
@@ -34,8 +36,7 @@ router.post(
         console.log('🚨 Passwords do not match!');
         return res.status(400).json({ msg: 'Invalid credentials' });
       }
-
-      const payload = { user: { id: user.id, role: user.role } };
+      const payload = { user: { _id: user._id, role: user.role } };
       const token = jwt.sign(payload, process.env.JWT_SECRET, {
         expiresIn: '1d',
       });
@@ -52,7 +53,7 @@ router.post(
 
       res.json({
         user: {
-          id: user.id,
+          _id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
