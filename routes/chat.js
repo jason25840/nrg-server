@@ -21,7 +21,8 @@ router.get('/:room', async (req, res) => {
   try {
     const messages = await Message.find({ room: req.params.room })
       .populate('sender', 'name avatar')
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: 1 })
+      .lean();
 
     res.json(messages);
   } catch (err) {
@@ -109,14 +110,29 @@ const socketHandler = (io) => {
 
         // Prevent duplicate reactions from the same user
         const userId = socket.user?._id?.toString();
-        if (userId && !message.reactions.get(emoji).includes(userId)) {
-          message.reactions.get(emoji).push(userId);
+        if (userId) {
+          const emojiUsers = message.reactions.get(emoji);
+          const userIndex = emojiUsers.findIndex(
+            (id) => id.toString() === userId
+          );
+
+          if (userIndex === -1) {
+            emojiUsers.push(userId);
+          } else {
+            emojiUsers.splice(userIndex, 1);
+            if (emojiUsers.length === 0) {
+              message.reactions.delete(emoji);
+            }
+          }
+
+          message.markModified('reactions');
           await message.save();
 
           io.emit('messageReaction', {
             messageId,
             emoji,
             userId,
+            reactions: Object.fromEntries(message.reactions),
           });
         }
       } catch (err) {
