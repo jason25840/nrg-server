@@ -8,7 +8,7 @@ const articleSchema = new mongoose.Schema(
     author: { type: String, required: true, default: 'Anonymous' },
     image: {
       type: String,
-      default: '/images/placeholder.png',
+      default: '/images/NRG_Image_Placeholder.png',
     },
     likes: { type: Number, default: 0 },
     likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

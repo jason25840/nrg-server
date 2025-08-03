@@ -18,7 +18,10 @@ async function cleanImages() {
   try {
     const result = await Event.deleteMany({
       image: {
-        $in: ['/images/placeholder.png', 'https://via.placeholder.com/300'],
+        $in: [
+          '/images/NRG_Image_Placeholder.png',
+          'https://via.placeholder.com/300',
+        ],
       },
     });
 

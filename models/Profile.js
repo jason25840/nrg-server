@@ -8,8 +8,22 @@ const ProfileSchema = new mongoose.Schema({
   },
   pursuits: [
     {
-      pursuit: { type: String, required: true }, // e.g., "Climbing"
-      level: { type: String, required: true }, // e.g., "Advanced"
+      pursuit: {
+        type: String,
+        required: true,
+        enum: [
+          'Climbing',
+          'Whitewater Kayaking',
+          'Whitewater Rafting',
+          'Trail Running',
+          'Mountain Biking',
+        ],
+      },
+      level: {
+        type: String,
+        required: true,
+        enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+      },
     },
   ],
   accomplishments: [
