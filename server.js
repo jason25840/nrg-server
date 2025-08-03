@@ -1,8 +1,14 @@
 require('dotenv').config();
+
+// Allowed origins for CORS
+const CLIENT_URL = process.env.CLIENT_URL; // e.g., https://nrg-client.vercel.app
+const LOCAL_URL = 'http://localhost:3000';
+const allowedOrigins = [LOCAL_URL, CLIENT_URL].filter(Boolean);
+
 const express = require('express');
 const mongoose = require('mongoose');
 const socketIo = require('socket.io');
-const http = require('http'); // ✅ ADD THIS
+const http = require('http');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
@@ -17,8 +23,7 @@ const eventRoutes = require('./routes/events');
 const { router: chatRoutes, socketHandler } = require('./routes/chat');
 
 const app = express();
-
-const server = http.createServer(app); // ✅ CREATE SERVER
+const server = http.createServer(app);
 
 // Serve static files from the uploads folder so media can be accessed in the browser
 const path = require('path');
@@ -27,18 +32,17 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 // ✅ Setup Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true,
   },
 });
-
 socketHandler(io);
 
 // ✅ CORS and Middleware
 app.use(
   cors({
-    origin: 'http://localhost:3000',
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   })
@@ -70,4 +74,4 @@ app.use('/api/chat', chatRoutes);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5001;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`)); // ✅ LISTEN WITH SERVER
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
