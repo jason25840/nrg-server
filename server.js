@@ -1,9 +1,9 @@
 require('dotenv').config();
-
 // Allowed origins for CORS
-const CLIENT_URL = process.env.CLIENT_URL; // e.g., https://nrg-client.vercel.app
 const LOCAL_URL = 'http://localhost:3000';
-const allowedOrigins = [LOCAL_URL, CLIENT_URL].filter(Boolean);
+const CLIENT_URL = process.env.CLIENT_URL; // https://nrglines.com
+const WWW_CLIENT_URL = process.env.WWW_CLIENT_URL; // https://www.nrglines.com
+const allowedOrigins = [LOCAL_URL, CLIENT_URL, WWW_CLIENT_URL].filter(Boolean);
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -32,7 +32,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 // ✅ Setup Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS not allowed'), false);
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -42,7 +48,13 @@ socketHandler(io);
 // ✅ CORS and Middleware
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS not allowed'), false);
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   })
